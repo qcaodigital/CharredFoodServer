@@ -1,66 +1,26 @@
 require('dotenv').config();
 
-const express = require('express'),
-      app     = express(),
-      nodemailer = require('nodemailer'),
-      ejs     = require('ejs'),
-      cors    = require('cors')
+const express = require('express');
+const app = express();
+const cors = require('cors');
+const mongoose = require('mongoose');
 
 app.use(cors());
-app.use(express.urlencoded({ extended: true }))
-app.use(express.json())
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 app.set('view engine', 'ejs');
 
-app.post('/charredapi/contact-submit', (req, res) => {
-    const date = new Date(Date.now())
-    const data = req.body;
+const uri = `mongodb+srv://qcaodigital:${process.env.MONGO_PW}@qcaodigital.vys9n.mongodb.net/charred-food?retryWrites=true&w=majority`;
+mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.set('debug', true);
+const conn = mongoose.connection;
+conn.on('error', console.error.bind(console, 'connection error:'));
+conn.once('open', () => console.log('Connected to MongoDb.'));
 
-    console.log(data)
-
-    ejs.renderFile(__dirname + '/index.ejs', { data: data }, function(err, ejs){
-        if(err){
-            console.log(err)
-        } else {
-            const transporter = nodemailer.createTransport({
-                host: 'smtp.mailgun.org',
-                port: 587,
-                //MAILGUN ACCOUNT IS ZALEYA@GMAIL.COM
-                auth: {
-                    user: process.env.SMTP_USER,
-                    pass: process.env.SMTP_PASS
-                }
-            });
-
-            const mailOptions = {
-                from: 'info-noreply@charredfood.com',
-                to: 'charredfood.contact@gmail.com',
-                subject: `${data.subject.value} - from: ${data.firstname.value} ${data.lastname.value}`,
-                html: ejs
-            }
-
-            if(data.copy_recipient.value){
-                mailOptions = {
-                    ...mailOptions,
-                    cc: data.email.value
-                }
-            }
-
-            transporter.sendMail(mailOptions, (err, info) => {
-                if(err){
-                    // console.log(date.toString())
-                    console.log(err)
-                } else {
-                    // console.log(date.toString())
-                    console.log('Email sent:', info.response)
-                }
-            })
-
-            res.send(data)
-        }
-    })
-})
+app.use('/api/menu', require('./routes/menu'));
+app.use('/api/contact', require('./routes/contact'));
 
 const port = process.env.PORT || 3001;
 app.listen(port, (req, res) => {
-    console.log(`Server started on port ${port}`)
-})
+	console.log(`Server started on port ${port}`);
+});
